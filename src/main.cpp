@@ -3,11 +3,10 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/System.hpp>
+#include <Player.hpp>
 #include <SFML/Audio.hpp>
 #include <Wall.hpp>
-#include <Monster.hpp>
 
-const float RATE_MONSTER_MOVE = 20.0;
 
 int main(){
     
@@ -25,15 +24,6 @@ int main(){
     // Grid, 'menor unidade'
     const float GRID_SIZE = 10.f;
 
-    // Personagem principal.
-    sf::RectangleShape player;
-    player.setSize(sf::Vector2f(GRID_SIZE, GRID_SIZE));
-    sf::Vector2f playerPosition(0, 0);
-    player.setPosition(playerPosition); 
-    
-    sf::Vector2f player_velocity;
-    int movement_speed = GRID_SIZE;
-
     // Clock.
     float dt;
     sf::Clock dt_clock;
@@ -45,19 +35,27 @@ int main(){
     Wall wall(WINDOW_HEIGHT, WINDOW_WIDTH);
     wall.draw();
 
+    // Jagador
+    Player player(sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2), GRID_SIZE,  WINDOW_WIDTH,  WINDOW_HEIGHT, wall);
+
+    // Main event loop do jogo.
+
     // Main event loop do jogo.
     bool moving_left = false;
     bool moving_down = false;
     bool moving_up = false;
-    bool moving_right = false;
+    bool moving_right = false;   
 
-    Monster monster(GRID_SIZE, GRID_SIZE);
-    sf::Clock dt_monster;
+    // Musica.
+    sf::Music main_theme;
+    main_theme.openFromFile("./media/main_theme.wav"); // deve ser comparado com a localização do make
+    main_theme.setVolume(100);
+    main_theme.play();
+    
     while (window.isOpen()){
         sf::Event event;
         dt = dt_clock.restart().asSeconds();
         
-        player_velocity.x = 0.f; player_velocity.y = 0.f;
         while(window.pollEvent(event)){
             
             switch(event.type){
@@ -65,37 +63,8 @@ int main(){
                     window.close();
                 break;
 
-                case sf::Event::KeyPressed:
-                    if(event.key.code == sf::Keyboard::Right){
-                        moving_right = true;
-                        player_velocity.x = movement_speed;
-                    }
-                    if(event.key.code == sf::Keyboard::Down){
-                        moving_down = true;
-                        player_velocity.y = movement_speed;                        
-                    }
-                    if(event.key.code == sf::Keyboard::Up){
-                        moving_up = true;
-                        player_velocity.y = -movement_speed;
-                    }
-                    if(event.key.code == sf::Keyboard::Left){
-                        moving_left = true;
-                        player_velocity.x = -movement_speed;
-                    }
-                break;
-                case sf::Event::KeyReleased:
-                    if(event.key.code == sf::Keyboard::Right){
-                        moving_right = false;
-                    }
-                    if(event.key.code == sf::Keyboard::Down){
-                        moving_down = false;
-                    }
-                    if(event.key.code == sf::Keyboard::Up){
-                        moving_up = false;
-                    }
-                    if(event.key.code == sf::Keyboard::Left){
-                        moving_left = false;
-                    }
+                case (sf::Event::KeyPressed):// | sf::Event::KeyReleased ):
+                    player.move(event);
                 break;
 
                 default:
@@ -103,35 +72,13 @@ int main(){
             }
         }
 
-        // Colisão bordas.
-        sf::Vector2f nextPosition = player.getPosition() + player.getSize() + player_velocity;
-        if(nextPosition.x > 0 and nextPosition.x <= WINDOW_WIDTH and nextPosition.y > 0 and nextPosition.y <= WINDOW_HEIGHT)
-            player.move(player_velocity);
-
-        // Colisão paredes
-
-        bool can = true;
-        for (auto w: wall.get_block_list()){
-            auto pos = w.getPosition();
-            if (abs(pos.x - nextPosition.x + 10) + abs(pos.y - nextPosition.y + 10) < 10) {
-                can = false;
-            }      
-        }
-
-        if(can and nextPosition.x > 0 and nextPosition.x <= WINDOW_WIDTH and nextPosition.y > 0 and nextPosition.y <= WINDOW_HEIGHT)
-            player.move(player_velocity);
-
-        if (dt_monster.getElapsedTime().asMilliseconds() > RATE_MONSTER_MOVE) {
-            monster.move(player.getPosition());
-            dt_monster.restart().asMilliseconds();
-        }
         // Renderizar tudo. 
         window.clear();
-        window.draw(player);
-        window.draw(monster.get_monster());
-        for (auto w: wall.get_block_list())
-            window.draw(w);
+        window.draw(player.body);
 
+        for (auto w : wall.get_block_list())
+            window.draw(w);
+        
         window.display();
     }
 
